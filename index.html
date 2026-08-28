@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no"/>
+<meta name="theme-color" content="#0b0d10"/>
+<title>MTG Commander Life Counter</title>
+<style>
+:root{
+  --bg:#0b0d10; --panel:#14181d; --panel2:#1b2027; --text:#f4f7fb;
+  --muted:#9aa6b2; --line:#2b333d; --good:#4ade80; --bad:#fb7185; --accent:#8b5cf6;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+button,input{font:inherit}
+button{color:inherit}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+.app{min-height:100dvh;display:flex;flex-direction:column}
+header{height:54px;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,13,16,.94);backdrop-filter:blur(12px);z-index:20}
+.brand{font-weight:850;letter-spacing:.2px}.brand-wrap{display:flex;align-items:center;gap:5px;min-width:0}.heart-btn,.coin-top-btn,.random-top-btn{width:36px;height:36px;border:1px solid #5b2030;background:#2a1119;color:#fb7185;border-radius:11px;font-size:19px;line-height:1;font-weight:900;flex:0 0 auto}.coin-top-btn,.random-top-btn{border-color:var(--line);background:var(--panel);color:var(--text);font-size:18px}.player.random-flash{animation:randomFlash .5s ease-in-out 3;z-index:5}@keyframes randomFlash{0%,100%{filter:brightness(1);box-shadow:0 0 0 0 #ffffff00}50%{filter:brightness(1.16);box-shadow:0 0 0 2px #ffffff66}}
+.header-actions{display:flex;gap:7px}
+.icon-btn,.small-btn{border:1px solid var(--line);background:var(--panel);border-radius:12px;min-height:38px;padding:0 12px;font-weight:750}
+main{flex:1;min-height:0}
+.setup{max-width:620px;margin:0 auto;padding:22px 16px 40px}
+.setup h1{font-size:30px;line-height:1.05;margin:8px 0 8px}
+.setup p{color:var(--muted);margin:0 0 20px;line-height:1.45}
+.step{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:14px;margin:12px 0}
+.step-title{font-weight:800;margin-bottom:12px}
+.count-row{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}
+.count-btn{height:44px;border:1px solid var(--line);border-radius:12px;background:var(--panel2);font-weight:850}
+.count-btn.active{background:var(--accent);border-color:var(--accent)}
+.names{display:grid;gap:9px}
+.name-input{width:100%;height:46px;border:1px solid var(--line);border-radius:12px;background:#0f1318;color:var(--text);padding:0 13px;outline:none}
+.name-input:focus{border-color:var(--accent)}
+.start{width:100%;height:54px;border:0;border-radius:15px;background:linear-gradient(135deg,#7c3aed,#a855f7);font-size:17px;font-weight:900;margin-top:12px}
+.board{height:calc(100dvh - 54px);padding:8px;display:grid;gap:8px}
+.player{position:relative;overflow:hidden;container-type:inline-size;border:1px solid var(--line);border-radius:18px;background:linear-gradient(145deg,var(--p1),var(--p2));min-width:0;min-height:0;touch-action:manipulation}
+.player-inner{height:100%;display:grid;grid-template-rows:auto 1fr auto}
+.player-top{display:flex;align-items:center;justify-content:space-between;gap:6px;padding:9px 10px}
+.player-name{font-weight:900;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:clamp(14px,3.4vw,19px);text-shadow:0 1px 3px #0009}
+.player-menu{border:0;background:#0004;border-radius:9px;width:32px;height:30px;font-size:18px}
+.life-zone{display:grid;grid-template-columns:1fr 1.35fr 1fr;align-items:stretch;min-height:0}
+.life-side{border:0;background:transparent;font-size:clamp(26px,7vw,52px);font-weight:600;opacity:.9}
+.life-side:active{background:#fff1}
+.life-center{display:flex;align-items:center;justify-content:center;flex-direction:column;min-width:0}
+.life{
+  font-size:clamp(48px,26cqw,92px);
+  font-weight:950;
+  line-height:.82;
+  letter-spacing:-.05em;
+  text-shadow:0 2px 8px #0008;
+  transition:font-size .12s ease
+}
+.life[data-digits="3"]{font-size:clamp(42px,21cqw,74px)}
+.life[data-digits="4"]{font-size:clamp(36px,17cqw,62px)}
+.life[data-digits="5"]{font-size:clamp(31px,14cqw,52px)}
+.life[data-digits="6"]{font-size:clamp(27px,12cqw,44px)}
+.delta{height:19px;font-size:13px;font-weight:800;color:#fff;opacity:0;transition:.15s}
+.delta.show{opacity:.85}
+.player-bottom{display:flex;align-items:center;gap:6px;padding:7px 8px 8px}
+.cmd-btn{flex:1;min-width:0;height:36px;border:1px solid #ffffff22;background:#0004;border-radius:10px;font-size:12px;font-weight:850;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cmd-btn.danger{background:#7f1d1dcc;border-color:#fb7185}
+.poison{height:36px;border:1px solid #ffffff22;background:#0004;border-radius:10px;padding:0 9px;font-size:12px;font-weight:850}
+.modal-back{position:fixed;inset:0;background:#000b;display:none;align-items:flex-end;z-index:50}
+.modal-back.open{display:flex}
+.modal{width:100%;max-height:86dvh;overflow:auto;background:#101419;border:1px solid var(--line);border-radius:24px 24px 0 0;padding:14px 14px calc(14px + env(safe-area-inset-bottom))}
+.modal-handle{width:46px;height:5px;border-radius:9px;background:#3a424d;margin:0 auto 13px}
+.modal h2{margin:4px 0 4px;font-size:20px}
+.modal p{margin:0 0 12px;color:var(--muted);font-size:13px}
+.damage-grid{display:grid;gap:8px}
+.damage-row{display:grid;grid-template-columns:1fr auto auto auto;gap:7px;align-items:center;background:var(--panel);border-radius:13px;padding:8px}
+.damage-name{font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-shadow:0 1px 4px #000b;padding:3px 2px;margin:-3px -2px;line-height:1.35}
+.damage-value{font-weight:950;min-width:34px;text-align:center;text-shadow:0 2px 8px #0008}
+.dmg{width:42px;height:38px;border:1px solid var(--line);background:var(--panel2);border-radius:10px;font-size:20px;font-weight:900;text-shadow:0 2px 8px #0008}
+.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+.settings-block{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:11px;margin:10px 0}
+.settings-label{display:block;color:var(--muted);font-size:12px;font-weight:800;margin:0 0 7px}
+.settings-input{width:100%;height:44px;border:1px solid var(--line);border-radius:11px;background:#0f1318;color:var(--text);padding:0 12px;outline:none}
+.settings-input:focus{border-color:var(--accent)}
+.color-menu-row{display:flex;align-items:center;gap:10px}.menu-color-picker{width:48px;height:42px;border:0;background:transparent;padding:0}.color-value{font-weight:800;color:var(--muted);font-size:13px}
+.preset-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.preset-btn,.tool-btn{height:44px;border:1px solid var(--line);background:var(--panel2);border-radius:11px;font-weight:850}.custom-life-row{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:8px}.custom-life-row .tool-btn{padding:0 14px}
+.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}.tool-btn.primary{background:#31205c;border-color:#6d4bc3}.tool-result{min-height:48px;margin-top:10px;border-radius:12px;background:#0d1116;border:1px dashed #39424e;display:flex;align-items:center;justify-content:center;text-align:center;padding:9px;font-weight:900}.tool-result.big{font-size:18px}
+.section-head{font-size:13px;font-weight:900;color:#cbd5e1;margin:14px 0 7px;text-transform:uppercase;letter-spacing:.06em}
+
+.danger-btn{background:#3a1218;border:1px solid #7f1d1d;color:#fecdd3;border-radius:12px;height:44px;font-weight:850}
+.close-btn{background:var(--panel2);border:1px solid var(--line);border-radius:12px;height:44px;font-weight:850}
+.hidden{display:none!important}
+.toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:#111827;color:white;border:1px solid #374151;border-radius:12px;padding:9px 13px;font-size:13px;font-weight:750;opacity:0;pointer-events:none;transition:.2s;z-index:100}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (orientation:portrait){
+ .board[data-n="2"]{grid-template-columns:1fr;grid-template-rows:repeat(2,1fr)}
+ .board[data-n="3"],.board[data-n="4"]{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,1fr)}
+ .board[data-n="5"],.board[data-n="6"]{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(3,1fr)}
+ .board[data-n="7"],.board[data-n="8"]{grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(4,1fr)}
+}
+@media (orientation:landscape){
+ header{height:48px}
+ .board{height:calc(100dvh - 48px)}
+ .board[data-n="2"],.board[data-n="3"],.board[data-n="4"]{grid-template-columns:repeat(var(--cols),1fr)}
+ .board[data-n="5"],.board[data-n="6"]{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr)}
+ .board[data-n="7"],.board[data-n="8"]{grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr)}
+ .player-bottom{padding-top:3px}
+}
+@media (max-height:560px){
+ .player-top{padding:5px 8px}.player-bottom{padding:3px 6px 5px}.cmd-btn,.poison{height:30px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+<header id="header" class="hidden">
+  <div class="brand-wrap"><div class="brand">Commander Counter</div><button class="heart-btn" id="toolsBtn" aria-label="Leben für alle setzen">♥</button><button class="random-top-btn" id="randomTopBtn" aria-label="Zufallsspieler">🎲</button><button class="coin-top-btn" id="coinTopBtn" aria-label="Kopf oder Zahl">🪙</button></div>
+  <div class="header-actions">
+    <button class="small-btn" id="undoBtn" aria-label="Rückgängig">↶</button>
+    <button class="small-btn" id="redoBtn" aria-label="Wiederholen">↷</button>
+    <button class="small-btn" id="resetBtn">Reset</button>
+  </div>
+</header>
+
+<main>
+<section id="setup" class="setup">
+  <h1>MTG Commander<br>Life Counter</h1>
+  <p>Für 2–8 Spieler, mobil optimiert. Start bei 40 Leben; Commander-Schaden wird pro gegnerischem Commander separat gezählt.</p>
+
+  <div class="step">
+    <div class="step-title">Spieleranzahl</div>
+    <div class="count-row" id="countRow"></div>
+  </div>
+
+  <div class="step">
+    <div class="step-title">Spielernamen</div>
+    <div class="names" id="names"></div>
+  </div>
+
+  <button class="start" id="startBtn">Spiel starten</button>
+</section>
+
+<section id="board" class="board hidden"></section>
+</main>
+</div>
+
+<div id="modalBack" class="modal-back">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2 id="modalTitle">Spielermenü</h2>
+    <div class="settings-block" id="playerSettingsBlock">
+      <label class="settings-label" for="playerNameInput">Name</label>
+      <input id="playerNameInput" class="settings-input" maxlength="30" autocomplete="off">
+      <div class="settings-label" style="margin-top:10px">Farbe</div>
+      <div class="color-menu-row"><input id="playerColorInput" class="menu-color-picker" type="color"><span id="colorValue" class="color-value"></span></div>
+    </div>
+    <div class="section-head" id="commanderSectionHead">Commander-Schaden</div>
+    <p>21 Kampfschaden von demselben Commander bedeutet eine Niederlage.</p>
+    <div class="damage-grid" id="damageGrid"></div>
+    <div class="modal-actions">
+      <button class="danger-btn" id="resetPlayerBtn">Spieler zurücksetzen</button>
+      <button class="close-btn" id="closeModalBtn">Schließen</button>
+    </div>
+  </div>
+</div>
+<div id="toolsBack" class="modal-back">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <h2>Leben ♥</h2>
+    <p>Lebenspunkte für alle Spieler gleichzeitig setzen.</p>
+    <div class="settings-block">
+      <div class="settings-label">Leben für alle Spieler</div>
+      <div class="preset-grid">
+        <button class="preset-btn" data-life="20">20</button>
+        <button class="preset-btn" data-life="30">30</button>
+        <button class="preset-btn" data-life="40">40</button>
+      </div>
+      <div class="custom-life-row"><input id="customLife" class="settings-input" inputmode="numeric" type="number" min="0" max="999" placeholder="Eigene Zahl"><button id="setCustomLife" class="tool-btn">Setzen</button></div>
+    </div>
+    <div class="modal-actions" style="grid-template-columns:1fr"><button class="close-btn" id="closeToolsBtn">Schließen</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const COLORS = [
+ ['#2457A6','#173A70'], ['#237A57','#174D39'], ['#A83232','#6E2020'], ['#6842A6','#422B70'],
+ ['#A66A22','#6B4518'], ['#247A82','#174F55'], ['#8A315F','#59203E'], ['#465A78','#2D3B50']
+];
+let count=4, players=[], selected=null, history=[], redoHistory=[];
+const $=s=>document.querySelector(s);
+
+function save(){localStorage.setItem('cmd-life-state',JSON.stringify({count,players}));}
+function snap(){history.push(JSON.stringify(players)); if(history.length>30)history.shift(); redoHistory=[];}
+function toast(t){let el=$('#toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1200)}
+
+function setupUI(){
+ const row=$('#countRow'); row.innerHTML='';
+ for(let i=2;i<=8;i++){
+  const b=document.createElement('button'); b.className='count-btn'+(i===count?' active':''); b.textContent=i;
+  b.onclick=()=>{count=i; setupUI();};
+  row.appendChild(b);
+ }
+ const names=$('#names'); names.innerHTML='';
+ for(let i=0;i<count;i++){
+  const inp=document.createElement('input'); inp.className='name-input'; inp.placeholder=`Spieler ${i+1}`;
+  inp.value=(players[i]&&players[i].name)||'';
+  inp.oninput=()=>{if(!players[i])players[i]={};players[i].name=inp.value};
+  names.appendChild(inp);
+ }
+}
+
+function newGame(){
+ const oldNames=[...document.querySelectorAll('.name-input')].map((x,i)=>x.value.trim()||`Spieler ${i+1}`);
+ players=Array.from({length:count},(_,i)=>({
+   id:crypto.randomUUID?crypto.randomUUID():String(Date.now()+i),
+   name:oldNames[i], life:40, poison:0, color:COLORS[i][0], commander:{}
+ }));
+ players.forEach((p,i)=>players.forEach((q,j)=>{if(i!==j)p.commander[q.id]=0}));
+ history=[]; redoHistory=[]; save(); showBoard();
+}
+
+function showBoard(){
+ $('#setup').classList.add('hidden'); $('#header').classList.remove('hidden'); $('#board').classList.remove('hidden');
+ renderBoard();
+}
+
+
+
+function renderBoard(){
+ const board=$('#board'); board.dataset.n=players.length;
+ board.style.setProperty('--cols',players.length);
+ board.innerHTML='';
+ players.forEach((p,i)=>{
+  const card=document.createElement('article'); card.className='player';
+  const playerColor=p.color||COLORS[i%COLORS.length][0];
+  p.color=playerColor;
+  card.style.setProperty('--player-color',playerColor);
+  card.style.setProperty('--p1',playerColor);card.style.setProperty('--p2',darken(playerColor,0.48));
+  const maxCmd=Math.max(0,...Object.values(p.commander||{}));
+  card.innerHTML=`
+   <div class="player-inner">
+    <div class="player-top">
+      <div class="player-name">${esc(p.name)}</div>
+<button class="player-menu" aria-label="Spielermenü öffnen">⋯</button>
+    </div>
+    <div class="life-zone">
+      <button class="life-side minus" aria-label="Leben minus">−</button>
+      <div class="life-center"><div class="delta"></div><div class="life" data-digits="${lifeDigits(p.life)}">${p.life}</div></div>
+      <button class="life-side plus" aria-label="Leben plus">+</button>
+    </div>
+    <div class="player-bottom">
+      <button class="cmd-btn ${maxCmd>=21?'danger':''}">⚔ Commander ${maxCmd||0}</button>
+      <button class="poison">☠ ${p.poison||0}</button>
+    </div>
+   </div>`;
+  let tapDelta=0;
+  const changeLife=(d)=>{
+    snap(); p.life+=d; save();
+    const lifeEl=card.querySelector('.life'); lifeEl.textContent=p.life; lifeEl.dataset.digits=lifeDigits(p.life);
+    const de=card.querySelector('.delta');
+    tapDelta += d;
+    de.textContent=(tapDelta>0?'+':'')+tapDelta;
+    de.classList.add('show');
+    clearTimeout(de._t);
+    de._t=setTimeout(()=>{
+      de.classList.remove('show');
+      tapDelta=0;
+    },1300);
+    if(navigator.vibrate)navigator.vibrate(8);
+  };
+  card.querySelector('.minus').onclick=()=>changeLife(-1);
+  card.querySelector('.plus').onclick=()=>changeLife(1);
+  // long press +/- 5
+  for(const [sel,d] of [['.minus',-5],['.plus',5]]){
+    const el=card.querySelector(sel); let timer;
+    const start=e=>{timer=setTimeout(()=>{changeLife(d);timer=null},520)};
+    const end=e=>{if(timer){clearTimeout(timer);timer=null}};
+    el.addEventListener('pointerdown',start); el.addEventListener('pointerup',end); el.addEventListener('pointercancel',end); el.addEventListener('pointerleave',end);
+  }
+  card.querySelector('.player-menu').onclick=()=>openPlayerMenu(i);
+  card.querySelector('.cmd-btn').onclick=()=>openCommander(i);
+  card.querySelector('.poison').onclick=()=>{snap();p.poison=(p.poison||0)+1;save();renderBoard();};
+  card.querySelector('.poison').oncontextmenu=e=>{e.preventDefault();snap();p.poison=Math.max(0,(p.poison||0)-1);save();renderBoard();};
+  board.appendChild(card);
+ });
+}
+
+function fillCommanderDamage(i){
+ const p=players[i];
+ const g=$('#damageGrid');g.innerHTML='';
+ players.forEach((attacker,j)=>{
+   if(i===j)return;
+   const v=p.commander[attacker.id]||0;
+   const row=document.createElement('div');row.className='damage-row';
+   row.innerHTML=`<div class="damage-name">von ${esc(attacker.name)}</div><button class="dmg dm">−</button><div class="damage-value ${v>=21?'danger':''}">${v}</div><button class="dmg dp">+</button>`;
+   const ci=players.findIndex(x=>x.id===attacker.id);
+   const baseColor=attacker.color||COLORS[Math.max(0,ci)%COLORS.length][0];
+   const darken=(hex,amount=0.36)=>{
+     const h=hex.replace('#','');
+     const n=parseInt(h.length===3?h.split('').map(x=>x+x).join(''):h,16);
+     const r=Math.max(0,Math.round(((n>>16)&255)*(1-amount)));
+     const g=Math.max(0,Math.round(((n>>8)&255)*(1-amount)));
+     const b=Math.max(0,Math.round((n&255)*(1-amount)));
+     return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+   };
+   const darkColor=darken(baseColor);
+   row.style.background=`linear-gradient(135deg, ${baseColor}, ${darkColor})`;
+   row.style.border=`1px solid ${baseColor}`;
+   row.querySelectorAll('.dmg').forEach(btn=>{
+     btn.style.background='rgba(0,0,0,.28)';
+     btn.style.border='1px solid rgba(255,255,255,.22)';
+   });
+   row.querySelector('.dm').onclick=()=>chgCmd(attacker.id,-1);
+   row.querySelector('.dp').onclick=()=>chgCmd(attacker.id,1);
+   g.appendChild(row);
+ });
+}
+function openPlayerMenu(i){
+ selected=i; const p=players[i];
+ $('#modalTitle').textContent=`${p.name}: Spielermenü`;
+ $('#playerSettingsBlock').classList.remove('hidden');
+ $('#commanderSectionHead').classList.remove('hidden');
+ $('#playerNameInput').value=p.name;
+ $('#playerColorInput').value=p.color||COLORS[i%COLORS.length][0];
+ $('#colorValue').textContent=$('#playerColorInput').value.toUpperCase();
+ fillCommanderDamage(i);
+ $('#modalBack').classList.add('open');
+}
+function openCommander(i){
+ selected=i; const p=players[i];
+ $('#modalTitle').textContent=`${p.name}: Commander-Schaden`;
+ $('#playerSettingsBlock').classList.add('hidden');
+ $('#commanderSectionHead').classList.remove('hidden');
+ fillCommanderDamage(i);
+ $('#modalBack').classList.add('open');
+}
+function chgCmd(attackerId,d){
+ const p=players[selected]; snap();p.commander[attackerId]=Math.max(0,(p.commander[attackerId]||0)+d);save();openCommander(selected);renderBoard();
+ if(p.commander[attackerId]>=21)toast('21 Commander-Schaden erreicht');
+}
+function closeModal(){ $('#modalBack').classList.remove('open'); $('#playerSettingsBlock').classList.remove('hidden'); selected=null; }
+$('#playerNameInput').addEventListener('input',e=>{
+ if(selected==null)return; const v=e.target.value.trimStart(); players[selected].name=v||`Spieler ${selected+1}`; save(); renderBoard(); $('#modalTitle').textContent=`${players[selected].name}: Spielermenü`;
+});
+$('#playerColorInput').addEventListener('input',e=>{
+ if(selected==null)return; players[selected].color=e.target.value; $('#colorValue').textContent=e.target.value.toUpperCase(); save(); renderBoard();
+});
+function setAllLife(value){
+ const n=Number(value); if(!Number.isFinite(n)||n<0)return false; snap(); players.forEach(p=>p.life=Math.round(n)); save(); renderBoard(); toast(`Alle Spieler: ${Math.round(n)} Leben`); return true;
+}
+function openTools(){ $('#toolsBack').classList.add('open'); }
+function closeTools(){ $('#toolsBack').classList.remove('open'); }
+function lifeDigits(value){ return Math.min(6,Math.max(1,String(value).length)); }
+function darken(hex,f=0.48){
+ const h=String(hex).replace('#','');
+ if(!/^[0-9a-fA-F]{6}$/.test(h))return '#18202b';
+ const n=parseInt(h,16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+ const c=x=>Math.max(0,Math.min(255,Math.round(x*f))).toString(16).padStart(2,'0');
+ return '#'+c(r)+c(g)+c(b);
+}
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+$('#toolsBtn').onclick=openTools;
+$('#coinTopBtn').onclick=()=>{ const side=Math.random()<.5?'Kopf':'Zahl'; toast(`🪙 ${side}`); if(navigator.vibrate)navigator.vibrate(55); };
+$('#closeToolsBtn').onclick=closeTools;
+$('#toolsBack').onclick=e=>{if(e.target.id==='toolsBack')closeTools()};
+document.querySelectorAll('.preset-btn').forEach(b=>b.onclick=()=>setAllLife(b.dataset.life));
+$('#setCustomLife').onclick=()=>{if(!setAllLife($('#customLife').value))toast('Bitte gültige Lebenszahl eingeben')};
+$('#customLife').addEventListener('keydown',e=>{if(e.key==='Enter')$('#setCustomLife').click()});
+$('#randomTopBtn').onclick=()=>{
+ if(!players.length)return; const idx=Math.floor(Math.random()*players.length), p=players[idx]; const cards=[...document.querySelectorAll('.player')]; cards.forEach(c=>c.classList.remove('random-flash')); if(cards[idx]){void cards[idx].offsetWidth;cards[idx].classList.add('random-flash');setTimeout(()=>cards[idx]?.classList.remove('random-flash'),1600)} toast(`🎲 ${p.name}`); if(navigator.vibrate)navigator.vibrate(35);
+};
+$('#startBtn').onclick=newGame;
+$('#closeModalBtn').onclick=closeModal;
+$('#modalBack').onclick=e=>{if(e.target.id==='modalBack')closeModal()};
+$('#resetPlayerBtn').onclick=()=>{
+ if(selected==null)return; snap(); const p=players[selected];p.life=40;p.poison=0;Object.keys(p.commander).forEach(k=>p.commander[k]=0);save();closeModal();renderBoard();
+};
+$('#resetBtn').onclick=()=>{
+ if(confirm('Ganzes Spiel zurücksetzen?')){localStorage.removeItem('cmd-life-state');players=[];history=[];redoHistory=[];$('#board').classList.add('hidden');$('#header').classList.add('hidden');$('#setup').classList.remove('hidden');setupUI();}
+};
+$('#undoBtn').onclick=()=>{
+ if(!history.length){toast('Nichts zum Rückgängigmachen');return}
+ redoHistory.push(JSON.stringify(players));
+ players=JSON.parse(history.pop());save();renderBoard();toast('Rückgängig');
+};
+$('#redoBtn').onclick=()=>{
+ if(!redoHistory.length){toast('Nichts zum Wiederholen');return}
+ history.push(JSON.stringify(players));
+ players=JSON.parse(redoHistory.pop());save();renderBoard();toast('Wiederholt');
+};
+
+// swipe on poison: tap +1, long press -1
+document.addEventListener('contextmenu',e=>{ if(e.target.closest('.life-side')) e.preventDefault(); });
+
+try{
+ const saved=JSON.parse(localStorage.getItem('cmd-life-state')||'null');
+ if(saved?.players?.length>=2){count=saved.count||saved.players.length;players=saved.players;showBoard()} else setupUI();
+}catch(e){setupUI()}
+</script>
+</body>
+</html>

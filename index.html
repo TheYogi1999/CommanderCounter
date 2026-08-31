@@ -64,7 +64,20 @@ header{
   background:var(--panel);
   color:var(--text);
   font-size:15px
-}.player.random-flash{animation:randomFlash .5s ease-in-out 3;z-index:5}@keyframes randomFlash{0%,100%{filter:brightness(1);box-shadow:0 0 0 0 #ffffff00}50%{filter:brightness(1.16);box-shadow:0 0 0 2px #ffffff66}}
+}.player.random-flash{
+  animation:randomFlash .65s ease-in-out 3;
+  z-index:5
+}
+@keyframes randomFlash{
+  0%,100%{
+    filter:brightness(1);
+    box-shadow:0 0 0 2px #ffffff22,0 0 0 0 #ffffff00
+  }
+  50%{
+    filter:brightness(1.08);
+    box-shadow:0 0 0 3px #ffffffcc,0 0 18px 4px #ffffff55
+  }
+}
 .header-actions{
   display:flex;
   align-items:center;
@@ -272,6 +285,15 @@ const COLORS = [
 let count=4, players=[], selected=null, history=[], redoHistory=[];
 const $=s=>document.querySelector(s);
 
+function resetPlayerColors(){
+  players.forEach((p,i)=>{
+    const c=COLORS[i % COLORS.length];
+    p.color1=c[0];
+    p.color2=c[1];
+    p.color=c[0];
+  });
+}
+
 function save(){localStorage.setItem('cmd-life-state',JSON.stringify({count,players}));}
 function snap(){history.push(JSON.stringify(players)); if(history.length>30)history.shift(); redoHistory=[];}
 function toast(t){let el=$('#toast');el.textContent=t;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1200)}
@@ -460,7 +482,15 @@ $('#resetPlayerBtn').onclick=()=>{
  if(selected==null)return; snap(); const p=players[selected];p.life=40;p.poison=0;Object.keys(p.commander).forEach(k=>p.commander[k]=0);save();closeModal();renderBoard();
 };
 $('#resetBtn').onclick=()=>{
- if(confirm('Ganzes Spiel zurücksetzen?')){localStorage.removeItem('cmd-life-state');players=[];history=[];redoHistory=[];$('#board').classList.add('hidden');$('#header').classList.add('hidden');$('#setup').classList.remove('hidden');setupUI();}
+ if(confirm('Ganzes Spiel zurücksetzen?')){
+   resetPlayerColors();
+   localStorage.removeItem('cmd-life-state');
+   players=[];history=[];redoHistory=[];
+   $('#board').classList.add('hidden');
+   $('#header').classList.add('hidden');
+   $('#setup').classList.remove('hidden');
+   setupUI();
+ }
 };
 $('#undoBtn').onclick=()=>{
  if(!history.length){toast('Nichts zum Rückgängigmachen');return}
